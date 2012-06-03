@@ -20,7 +20,7 @@ VPLAYER_MATCHES=Regex("SNI.HGTV.Player.FullSize\('vplayer-1','([^']*)'")
 
 ####################################################################################################
 def Start():
- 
+
 	Plugin.AddPrefixHandler(PLUGIN_PREFIX, MainMenu, NAME, ICON, ART)
 	Plugin.AddViewGroup("Details", viewMode="InfoList", mediaType="items")
 	Plugin.AddViewGroup("List", viewMode="List", mediaType="items")
@@ -31,7 +31,7 @@ def Start():
 	ObjectContainer.viewGroup = "List"
 
 	DirectoryObject.thumb = R(ICON)
-	
+
 	HTTP.CacheTime = CACHE_1HOUR
 
 ##################################################################################################
@@ -85,26 +85,18 @@ def GetShows(path,title=None):
 
 	return oc
 
-	
+
 def GetDurationFromString(duration):
 
-	try:
-		durationArray = duration.split(":")
+	seconds = 0
 
-		if len(durationArray) == 3:
-			hours = int(durationArray[0])
-			minutes = int(durationArray[1])
-			seconds = int(durationArray[2])
-		elif len(durationArray) == 2:
-			hours = 0
-			minutes = int(durationArray[0])
-			seconds = int(durationArray[1])
-		elif len(durationArray)	==	1:
-			hours = 0
-			minutes = 0
-			seconds = int(durationArray[0])
-			
-		return int(((hours)*3600 + (minutes*60) + seconds)*1000)
-		
+	try:
+		duration = duration.split(':')
+		duration.reverse()
+
+		for i in range(0, len(duration)):
+			seconds += int(duration[i]) * (60**i)
 	except:
-		return 0
+		pass
+
+	return seconds * 1000
