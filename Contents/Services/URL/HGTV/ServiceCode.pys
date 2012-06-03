@@ -15,16 +15,17 @@ def GetItemInfo(url,itemInfo):
 
 	if itemInfo == "Metadata":
 		title = c.xpath("./clipName")[0].text
-		show = c.xpath("showName")[0].text
-		duration = GetDurationFromString(c.xpath("length")[0].text)
-		summary = c.xpath("abstract")[0].text
-		thumb = c.xpath("thumbnailUrl")[0].text
+		show = c.xpath("./showName")[0].text
+		duration = GetDurationFromString(c.xpath("./length")[0].text)
+		summary = c.xpath("./abstract")[0].text
+		thumb = c.xpath("./thumbnailUrl")[0].text
 
 		return EpisodeObject(
 			title = title,
 			summary = summary,
 			duration = duration,
-			show = show
+			show = show,
+			thumb = thumb
 		)
 	elif itemInfo == "MediaObject":
 		url = c.xpath("./videoUrl")[0].text.replace('http://wms','rtmp://flash').replace('.wmv','').replace('scrippsnetworks.com/','scrippsnetworks.com/ondemand/&').split('&')

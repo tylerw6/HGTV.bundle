@@ -10,9 +10,6 @@ SHOW_LINKS_URL			 = "http://www.hgtv.com/full-episodes/package/index.html"
 # Clip URLs
 BASE_URL				= "http://www.hgtv.com"
 
-CACHE_INTERVAL			= 2000
-
-
 # NB: this is a "made up" URL, they don't have direct play URLs
 # for videos and even their listing pages are all over the map
 # therefore the URL service is local (within the plugin) as opposed
@@ -28,14 +25,15 @@ def Start():
 	Plugin.AddViewGroup("Details", viewMode="InfoList", mediaType="items")
 	Plugin.AddViewGroup("List", viewMode="List", mediaType="items")
 
-	MediaContainer.title1 = NAME
-	MediaContainer.content = 'Items'
-	MediaContainer.art = R(ART)
-	MediaContainer.viewGroup = "List"
+	ObjectContainer.title1 = NAME
+	ObjectContainer.content = 'Items'
+	ObjectContainer.art = R(ART)
+	ObjectContainer.viewGroup = "List"
 
-	DirectoryItem.thumb = R(ICON)
+	DirectoryObject.thumb = R(ICON)
 	
-	HTTP.CacheTime = CACHE_INTERVAL
+	HTTP.CacheTime = CACHE_1HOUR
+
 ##################################################################################################
 
 def MainMenu():
