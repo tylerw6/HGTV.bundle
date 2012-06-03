@@ -3,7 +3,7 @@ def NormalizeURL(url):
 	return url
 
 ####################################################################################################
-def getItemInfo(url,itemInfo):
+def GetItemInfo(url,itemInfo):
 
 	videoId = url.split('videoId=')[1].split('&')[0]
 	showId = url.split('showId=')[1]
@@ -42,12 +42,12 @@ def getItemInfo(url,itemInfo):
 ####################################################################################################
 def MetadataObjectForURL(url):
 
-	return getItemInfo(url,'Metadata')
+	return GetItemInfo(url,'Metadata')
 
 ####################################################################################################
 def MediaObjectsForURL(url):
 
-	return getItemInfo(url,'MediaObject')
+	return GetItemInfo(url,'MediaObject')
 
 ####################################################################################################
 def TestURLs():
@@ -67,7 +67,7 @@ def TestURLs():
 ####################################################################################################
 def GetDurationFromString(duration):
 
-	seconds  = 0
+	seconds = 0
 
 	try:
 		duration = duration.split(':')
