@@ -11,33 +11,29 @@ def GetItemInfo(url,itemInfo):
 	# NB: must do it this way as the first line of their xml is a carriage return (which makes it invalid)
 	xmlcontent = HTTP.Request('http://www.hgtv.com/hgtv/channel/xml/0,,%s,00.xml' % showId).content.strip()
 
-	for c in XML.ElementFromString(xmlcontent).xpath("//video"):
-		# only process our given videoId
-		thisVideoId = c.xpath("videoId")[0].text
-		if thisVideoId == videoId:
-			title = c.xpath("./clipName")[0].text
-			url = c.xpath("./videoUrl")[0].text.replace('http://wms','rtmp://flash').replace('.wmv','').replace('scrippsnetworks.com/','scrippsnetworks.com/ondemand/&').split('&')
+	c = XML.ElementFromString(xmlcontent).xpath("//video/videoId[text()='%s']/parent::video" % videoId)[0]
 
-			if itemInfo == "Metadata":
-				duration = GetDurationFromString(c.xpath("length")[0].text)
-				desc = c.xpath("abstract")[0].text
-				thumb = c.xpath("thumbnailUrl")[0].text
+	if itemInfo == "Metadata":
+		title = c.xpath("./clipName")[0].text
+		show = c.xpath("showName")[0].text
+		duration = GetDurationFromString(c.xpath("length")[0].text)
+		summary = c.xpath("abstract")[0].text
+		thumb = c.xpath("thumbnailUrl")[0].text
 
-				md = {"title":title,"summary":summary,"duration":duration,"show":show_title}
+		return EpisodeObject(
+			title = title,
+			summary = summary,
+			duration = duration,
+			show = show
+		)
+	elif itemInfo == "MediaObject":
+		url = c.xpath("./videoUrl")[0].text.replace('http://wms','rtmp://flash').replace('.wmv','').replace('scrippsnetworks.com/','scrippsnetworks.com/ondemand/&').split('&')
 
-				return EpisodeObject(
-					title = md['title'],
-					summary = md['summary'],
-					duration = md['duration'],
-					show = md['show_title']
-				)
-			elif itemInfo == "MediaObject":
-				#return url
-				return [
-					MediaObject(
-						parts = [PartObject(key=RTMPVideoURL(url=url[0], clip=url[1]))]
-					)
-				]
+		return [
+			MediaObject(
+				parts = [PartObject(key=RTMPVideoURL(url=url[0], clip=url[1]))]
+			)
+		]
 
 ####################################################################################################
 def MetadataObjectForURL(url):
