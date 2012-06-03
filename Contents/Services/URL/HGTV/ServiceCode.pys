@@ -1,0 +1,121 @@
+def NormalizeURL(url):
+  return url
+
+####################################################################################################
+
+def getItemInfo(url,itemInfo):
+	
+	videoId = url.split('videoId=')[1].split('&')[0]
+	showId = url.split('showId=')[1]
+	showURL= 'http://www.hgtv.com/hgtv/channel/xml/0,,%s,00.xml' % showId
+	Log("Gerk: showId: %s",showId)
+	Log("Gerk: videoId: %s",videoId)
+
+	# NB: must do it this way as the first line of their xml is a carriage return (which makes it invalid)
+	data = HTTP.Request('http://www.hgtv.com/hgtv/channel/xml/0,,42421,00.xml').content.strip()
+	xmldata = XML.ElementFromString(data)
+	
+ 	for c in xmldata.xpath("//video"):
+ 		# only process our given videoId
+ 		thisVideoId = c.xpath("videoId")[0].text
+ 		if thisVideoId == videoId:
+ 			title = c.xpath("./clipName")[0].text
+ 			Log("Gerk: videoUrl: %s",c.xpath("./videoUrl")[0].text)
+ 			url = c.xpath("./videoUrl")[0].text.replace('http://wms','rtmp://flash').replace('.wmv','').replace('scrippsnetworks.com/','scrippsnetworks.com/ondemand/&').split('&')
+ 			Log("Gerk: url: %s",url)
+ 
+ 			if itemInfo == "Metadata":
+ 				duration = GetDurationFromString(c.xpath("length")[0].text)
+ 				desc = c.xpath("abstract")[0].text
+ 				thumb = c.xpath("thumbnailUrl")[0].text	
+ 
+ 				md = {"title":title,"summary":summary,"duration":duration,"show":show_title}
+ 				#return md
+ 				Log("Gerk: md: %s",md)
+ 				
+				return EpisodeObject(
+					title = md['title'],
+					summary = md['summary'],
+					duration = md['duration'],
+					show = md['show_title']
+				)
+ 			elif itemInfo == "MediaObject":
+ 				#return url
+ 				return [
+ 					MediaObject(
+ 						parts = [PartObject(key=RTMPVideoURL(url=url[0], clip=url[1]))]
+ 					)
+ 				]
+					
+
+
+
+def MetadataObjectForURL(url):
+	return getItemInfo(url,'Metadata')
+# 	md=getItemInfo(url,'Metadata')
+# 	return EpisodeObject(
+# 		title = md['ttitle'],
+# 		summary = md['summary'],
+# 		duration = md['duration'],
+# 		show = md['show_title']
+# 	)
+
+
+####################################################################################################
+def MediaObjectsForURL(url):
+
+	return getItemInfo(url,'MediaObject')
+	
+  	#moURL = getItemInfo(url,'MediaObject')
+  	#Log("Gerk: moURL: %s",moURL)
+# 	return [
+# 		MediaObject(
+# 			parts = [PartObject(key=RTMPVideoURL(url=moURL[0], clip=moURL[1]))]
+# 		)
+# 	]
+
+#    return IndirectResponse(VideoClipObject, key=RTMPVideoURL(url=player, clip=clip))
+	
+	#return getItemInfo(url,'MediaObject')
+
+
+####################################################################################################
+def TestURLs():
+#   test_urls = []
+#   data = HTML.ElementFromURL(MTV_VIDEOS)
+#   for video in data.xpath('//item'):
+#     try:
+#       link = video.xpath('.//img')[0].get('src')
+#       test_urls.append(link)
+#     except:
+#       continue
+#     if len(test_urls) > 3:
+#       break
+#     else:
+#       pass
+#   return test_urls
+	return 0
+
+
+def GetDurationFromString(duration):
+
+	try:
+		durationArray = duration.split(":")
+
+		if len(durationArray) == 3:
+			hours = int(durationArray[0])
+			minutes = int(durationArray[1])
+			seconds = int(durationArray[2])
+		elif len(durationArray) == 2:
+			hours = 0
+			minutes = int(durationArray[0])
+			seconds = int(durationArray[1])
+		elif len(durationArray)	==	1:
+			hours = 0
+			minutes = 0
+			seconds = int(durationArray[0])
+
+		return int(((hours)*3600 + (minutes*60) + seconds)*1000)
+
+	except:
+		return 0
