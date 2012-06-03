@@ -25,7 +25,7 @@ def GetItemInfo(url,itemInfo):
 			summary = summary,
 			duration = duration,
 			show = show,
-			thumb = thumb
+			thumb = Resource.ContentsOfURLWithFallback(url=thumb, fallback='icon-default.png')
 		)
 	elif itemInfo == "MediaObject":
 		url = c.xpath("./videoUrl")[0].text.replace('http://wms','rtmp://flash').replace('.wmv','').replace('scrippsnetworks.com/','scrippsnetworks.com/ondemand/&').split('&')
