@@ -7,15 +7,13 @@ def getItemInfo(url,itemInfo):
 	
 	videoId = url.split('videoId=')[1].split('&')[0]
 	showId = url.split('showId=')[1]
-	showURL= 'http://www.hgtv.com/hgtv/channel/xml/0,,%s,00.xml' % showId
-	Log("Gerk: showId: %s",showId)
-	Log("Gerk: videoId: %s",videoId)
+
+	Log("Gerk: testURL: %s",url)
 
 	# NB: must do it this way as the first line of their xml is a carriage return (which makes it invalid)
-	data = HTTP.Request('http://www.hgtv.com/hgtv/channel/xml/0,,42421,00.xml').content.strip()
-	xmldata = XML.ElementFromString(data)
-	
- 	for c in xmldata.xpath("//video"):
+	xmlcontent = HTTP.Request('http://www.hgtv.com/hgtv/channel/xml/0,,%s,00.xml' % showId).content.strip()
+		
+	for c in XML.ElementFromString(xmlcontent).xpath("//video"):
  		# only process our given videoId
  		thisVideoId = c.xpath("videoId")[0].text
  		if thisVideoId == videoId:
@@ -30,8 +28,6 @@ def getItemInfo(url,itemInfo):
  				thumb = c.xpath("thumbnailUrl")[0].text	
  
  				md = {"title":title,"summary":summary,"duration":duration,"show":show_title}
- 				#return md
- 				Log("Gerk: md: %s",md)
  				
 				return EpisodeObject(
 					title = md['title'],
@@ -46,55 +42,30 @@ def getItemInfo(url,itemInfo):
  						parts = [PartObject(key=RTMPVideoURL(url=url[0], clip=url[1]))]
  					)
  				]
-					
-
 
 
 def MetadataObjectForURL(url):
 	return getItemInfo(url,'Metadata')
-# 	md=getItemInfo(url,'Metadata')
-# 	return EpisodeObject(
-# 		title = md['ttitle'],
-# 		summary = md['summary'],
-# 		duration = md['duration'],
-# 		show = md['show_title']
-# 	)
 
 
 ####################################################################################################
 def MediaObjectsForURL(url):
-
 	return getItemInfo(url,'MediaObject')
 	
-  	#moURL = getItemInfo(url,'MediaObject')
-  	#Log("Gerk: moURL: %s",moURL)
-# 	return [
-# 		MediaObject(
-# 			parts = [PartObject(key=RTMPVideoURL(url=moURL[0], clip=moURL[1]))]
-# 		)
-# 	]
-
-#    return IndirectResponse(VideoClipObject, key=RTMPVideoURL(url=player, clip=clip))
-	
-	#return getItemInfo(url,'MediaObject')
-
 
 ####################################################################################################
 def TestURLs():
-#   test_urls = []
-#   data = HTML.ElementFromURL(MTV_VIDEOS)
-#   for video in data.xpath('//item'):
-#     try:
-#       link = video.xpath('.//img')[0].get('src')
-#       test_urls.append(link)
-#     except:
-#       continue
-#     if len(test_urls) > 3:
-#       break
-#     else:
-#       pass
-#   return test_urls
-	return 0
+	# due to the nature of pulling these here are just some random static ones
+	# hopefully these shows will stay around for the tester to work :/
+	test_urls = []
+	test.urls.append('http://www.hgtv.com/video/?videoId=94162&showId=56323')
+	test_urls.append('http://www.hgtv.com/video/?videoId=46236&showId=32481')
+	test_urls.append('http://www.hgtv.com/video/?videoId=85581&showId=42421')
+	test_urls.append('http://www.hgtv.com/video/?videoId=39781&showId=21121')
+	test_urls.append('http://www.hgtv.com/video/?videoId=57984&showId=36706')
+	test_urls.append('http://www.hgtv.com/video/?videoId=54305&showId=12423')
+	test_urls.append('http://www.hgtv.com/video/?videoId=98041&showId=64962')
+	return test_urls
 
 
 def GetDurationFromString(duration):

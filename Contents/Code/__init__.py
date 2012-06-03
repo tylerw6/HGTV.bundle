@@ -1,4 +1,4 @@
-import re, sys, urllib2
+import re
 
 PLUGIN_PREFIX   = "/video/hgtv"
 
@@ -13,7 +13,14 @@ CACHE_INTERVAL			= 2000
 ART = "art-default.jpg"
 ICON = "icon-default.png"
 NAME = "HGTV"
+
+# NB: this is a "made up" URL, they don't have direct play URLs
+# for videos and even their listing pages are all over the map
+# therefore the URL service is local (within the plugin) as opposed
+# to putting it globally within the services.bundle
 VIDEO_URL="http://www.hgtv.com/video/?videoId=%s&showId=%s"
+
+VPLAYER_MATCHES=Regex("SNI.HGTV.Player.FullSize\('vplayer-1','([^']*)'")
 
 ####################################################################################################
 def Start():
@@ -33,7 +40,6 @@ def Start():
 ##################################################################################################
 
 def MainMenu():
-#	dir= MediaContainer(viewGroup = 'List')
 
 	oc = ObjectContainer( view_group = 'List')
 	for s in HTML.ElementFromURL(SHOW_LINKS_URL).xpath('//h2'):
@@ -53,32 +59,21 @@ def MainMenu():
 def GetShows(path,title=None):
 
 	html = HTTP.Request(path).content
-	matches = re.search("SNI.HGTV.Player.FullSize\('vplayer-1','([^']*)'", html)
+	matches = VPLAYER_MATCHES.search(html)
+	oc = ObjectContainer(view_group='List')
 	try:
-		oc = ObjectContainer(view_group='List')
 
 		show_id = matches.group(1)
-		matches = re.search("mdManager.addParameter\(\"SctnId\",[\s]*\"([^\"]*)", html)
-		showURL='http://www.hgtv.com/hgtv/channel/xml/0,,'+show_id+',00.xml'
-		xmlcontent = HTTP.Request('http://www.hgtv.com/hgtv/channel/xml/0,,'+show_id+',00.xml').content.strip()
-
-		#Log("Gerk: show URL: %s",showURL)
-		#Log(xmlcontent)
- 		#videos=XML.ElementFromString(xmlcontent)
-		#videos=XML.ObjectFromString(xmlcontent)
-		#Log(videos)
+		xmlcontent = HTTP.Request('http://www.hgtv.com/hgtv/channel/xml/0,,%s,00.xml' % show_id).content.strip()
 		
 		for c in XML.ElementFromString(xmlcontent).xpath("//video"):
 			title = c.xpath("./clipName")[0].text
-			Log("Gerk: in init title: %s",title)
+
 			duration = GetDurationFromString(c.xpath("length")[0].text)
 			desc = c.xpath("abstract")[0].text
 			videoId = c.xpath("videoId")[0].text
-			Log("Gerk: videoId from init: %s",videoId)
-			#url = c.xpath("./videoUrl")[0].text.replace('http://wms','rtmp://flash').replace('.wmv','').replace('scrippsnetworks.com/','scrippsnetworks.com/ondemand/&').split('&')
+
 			thumb_url = c.xpath("thumbnailUrl")[0].text
-			#dir.Append(RTMPVideoItem(url[0], clip=url[1], title=title, summary=desc, duration=duration, thumb=Function(GetThumb, path=thumb)))
-			#Log("Gerk: url: %s",url)
 			oc.add(
 				EpisodeObject(
 					url = VIDEO_URL % (videoId, show_id),
@@ -88,10 +83,10 @@ def GetShows(path,title=None):
 					thumb=Resource.ContentsOfURLWithFallback(url=thumb_url, fallback=ICON)
 				)
 			)
-			return oc
 	except:
 		oc = MessageContainer("Sorry","This section does not contain any videos")
-		return oc
+
+	return oc
 
 	
 def GetDurationFromString(duration):
