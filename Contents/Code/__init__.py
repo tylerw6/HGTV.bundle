@@ -2,26 +2,23 @@ NAME = "HGTV"
 ART = "art-default.jpg"
 ICON = "icon-default.png"
 
-PLUGIN_PREFIX   = "/video/hgtv"
-
 # Full Episode URLs
-SHOW_LINKS_URL			 = "http://www.hgtv.com/full-episodes/package/index.html"
+SHOW_LINKS_URL = "http://www.hgtv.com/full-episodes/package/index.html"
 
-# Clip URLs
-BASE_URL				= "http://www.hgtv.com"
+BASE_URL = "http://www.hgtv.com"
 
 # NB: this is a "made up" URL, they don't have direct play URLs
 # for videos and even their listing pages are all over the map
 # therefore the URL service is local (within the plugin) as opposed
 # to putting it globally within the services.bundle
-VIDEO_URL="http://www.hgtv.com/video/?videoId=%s&showId=%s"
+VIDEO_URL = "http://www.hgtv.com/video/?videoId=%s&showId=%s"
 
-VPLAYER_MATCHES=Regex("SNI.HGTV.Player.FullSize\('vplayer-1','([^']*)'")
+VPLAYER_MATCHES = Regex("SNI.HGTV.Player.FullSize\('vplayer-1','([^']*)'")
 
 ####################################################################################################
 def Start():
 
-	Plugin.AddPrefixHandler(PLUGIN_PREFIX, MainMenu, NAME, ICON, ART)
+	Plugin.AddPrefixHandler("/video/hgtv", MainMenu, NAME, ICON, ART)
 	Plugin.AddViewGroup("Details", viewMode="InfoList", mediaType="items")
 	Plugin.AddViewGroup("List", viewMode="List", mediaType="items")
 
@@ -35,7 +32,6 @@ def Start():
 	HTTP.CacheTime = CACHE_1HOUR
 
 ##################################################################################################
-
 def MainMenu():
 
 	oc = ObjectContainer( view_group = 'List')
@@ -52,7 +48,7 @@ def MainMenu():
 		)
 	return oc
 
-	
+##################################################################################################
 def GetShows(path,title=None):
 
 	html = HTTP.Request(path).content
@@ -85,7 +81,7 @@ def GetShows(path,title=None):
 
 	return oc
 
-
+##################################################################################################
 def GetDurationFromString(duration):
 
 	seconds = 0
