@@ -8,11 +8,13 @@
 		<dict>
 			<key>TestURLs</key>
 			<array>
-				<string>http://www.mtv.com/videos/nicki-minaj/769681/right-by-my-side-featuring-chris-brown-explicit.jhtml#id=1518072</string>
+				<string>http://www.hgtv.com/video/?videoId=94162&showId=56323</string>
+				<string>http://www.hgtv.com/video/?videoId=46236&showId=32481</string>
+				<string>http://www.hgtv.com/video/?videoId=85581&showId=42421</string>
 			</array>
 			<key>URLPatterns</key>
 			<array>
-				<string>http://www.hgtv.com/.*</string>
+				<string>http://www.hgtv.com/video/?.*</string>
 			</array>
 		</dict>
 	</dict>
