@@ -1,4 +1,6 @@
-import re
+NAME = "HGTV"
+ART = "art-default.jpg"
+ICON = "icon-default.png"
 
 PLUGIN_PREFIX   = "/video/hgtv"
 
@@ -10,9 +12,6 @@ BASE_URL				= "http://www.hgtv.com"
 
 CACHE_INTERVAL			= 2000
 
-ART = "art-default.jpg"
-ICON = "icon-default.png"
-NAME = "HGTV"
 
 # NB: this is a "made up" URL, they don't have direct play URLs
 # for videos and even their listing pages are all over the map
