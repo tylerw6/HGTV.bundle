@@ -52,7 +52,7 @@ def TestURLs():
 	# due to the nature of pulling these here are just some random static ones
 	# hopefully these shows will stay around for the tester to work :/
 	test_urls = []
-	test.urls.append('http://www.hgtv.com/video/?videoId=94162&showId=56323')
+	test_urls.append('http://www.hgtv.com/video/?videoId=94162&showId=56323')
 	test_urls.append('http://www.hgtv.com/video/?videoId=46236&showId=32481')
 	test_urls.append('http://www.hgtv.com/video/?videoId=85581&showId=42421')
 	test_urls.append('http://www.hgtv.com/video/?videoId=39781&showId=21121')
