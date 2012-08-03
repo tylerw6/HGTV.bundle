@@ -32,6 +32,8 @@ def GetItemInfo(url,itemInfo):
 
 		return [
 			MediaObject(
+				video_resolution = "480",
+				audio_channels = 2,
 				parts = [PartObject(key=RTMPVideoURL(url=url[0], clip=url[1]))]
 			)
 		]
