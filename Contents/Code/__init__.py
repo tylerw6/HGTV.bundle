@@ -120,9 +120,6 @@ def GetShows(path, title):
 			desc = c.xpath("./abstract")[0].text
 			videoId = c.xpath("./videoId")[0].text
 			thumb_url = c.xpath("./thumbnailUrl")[0].text.replace('_92x69.jpg', '_480x360.jpg')
-			Log("========================================")
-			Log(thumb_url)
-			Log("========================================")
 
 			oc.add(
 				EpisodeObject(
