@@ -15,12 +15,12 @@ BASE_URL = "http://www.hgtv.com"
 VIDEO_URL = "http://www.hgtv.com/video/?videoId=%s&showId=%s"
 
 VPLAYER_MATCHES = Regex("SNI.HGTV.Player.FullSize\('vplayer-1','([^']*)'")
+RE_AMPERSAND = Regex('&(?!amp;)')
 
 ####################################################################################################
 def Start():
 
 	Plugin.AddPrefixHandler("/video/hgtv", MainMenu, NAME, ICON, ART)
-	Plugin.AddViewGroup("Details", viewMode="InfoList", mediaType="items")
 	Plugin.AddViewGroup("List", viewMode="List", mediaType="items")
 
 	ObjectContainer.title1 = NAME
@@ -31,14 +31,20 @@ def Start():
 
 	HTTP.CacheTime = CACHE_1HOUR
 
-##################################################################################################
+####################################################################################################
 def MainMenu():
 
 	oc = ObjectContainer()
+
 	for s in HTML.ElementFromURL(SHOW_LINKS_URL).xpath('//h2'):
 		title = s.text
+
+		if title == "Featured Series":
+			continue
+
 		url = s.xpath("../p[@class='cta']/a")[0].get('href')
 		thumb_url = s.xpath("../a/img")[0].get('src')
+
 		oc.add(
 			DirectoryObject(
 				key = Callback(GetSeasons, path=BASE_URL + url, title=title, thumb_url=thumb_url),
@@ -46,86 +52,96 @@ def MainMenu():
 				thumb = Resource.ContentsOfURLWithFallback(url=thumb_url, fallback=ICON)
 			)
 		)
+
 	return oc
 
-##################################################################################################
-def GetSeasons(path,title,thumb_url):
+####################################################################################################
+def GetSeasons(path, title, thumb_url):
 
+	oc = ObjectContainer(title2=title)
 	html = HTTP.Request(path).content
 	matches = VPLAYER_MATCHES.search(html)
 
-	oc = ObjectContainer()
 	# grab the current season link and title only on this pass, grab each season's actual shows in GetShows()
 	try:
 		show_id = matches.group(1)
 		xml = HTTP.Request('http://www.hgtv.com/hgtv/channel/xml/0,,%s,00.xml' % show_id).content.strip()
+		xml = RE_AMPERSAND.sub('&amp;', xml)
 		title = XML.ElementFromString(xml).xpath("//title/text()")[0].strip()
+
 		oc.add(
 			DirectoryObject(
 				key = Callback(GetShows, path=path, title=title),
 				title = title,
-				thumb = Resource.ContentsOfURLWithFallback(url=thumb_url, fallback=ICON)		
-				)
+				thumb = Resource.ContentsOfURLWithFallback(url=thumb_url, fallback=ICON)
+			)
 		)
 	except:
 		pass
-	
+
 	# now try to grab any additional seasons/listings via xpath
-	try:
-		data = HTML.ElementFromURL(path)
-		for season in data.xpath("//ul[@class='channel-list']/li"):
+	data = HTML.ElementFromURL(path)
+
+	for season in data.xpath("//ul[@class='channel-list']/li"):
+		try:
 			title = season.xpath("./h4/text()")[0].strip()
 			url = season.xpath("./div/div[@class='crsl-wrap']/ul/li[1]/a/@href")[0]
+
 			oc.add(
 				DirectoryObject(
 					key = Callback(GetShows, path= BASE_URL + url, title=title),
 					title = title,
-					thumb = Resource.ContentsOfURLWithFallback(url=thumb_url, fallback=ICON)			
+					thumb = Resource.ContentsOfURLWithFallback(url=thumb_url, fallback=ICON)
 				)
 			)
-	except:
-		pass
+		except:
+			pass
 
 	if len(oc) < 1:
-		oc = MessageContainer("Sorry","This section does not contain any videos")
-
+		oc = ObjectContainer(header="Sorry", message="This section does not contain any videos")
 
 	return oc
 
-def GetShows(path,title):
+####################################################################################################
+def GetShows(path, title):
 
+	oc = ObjectContainer(title2=title)
 	html = HTTP.Request(path).content
 	matches = VPLAYER_MATCHES.search(html)
 
-	oc = ObjectContainer()
-	try:
+	show_id = matches.group(1)
+	xml = HTTP.Request('http://www.hgtv.com/hgtv/channel/xml/0,,%s,00.xml' % show_id).content.strip()
+	xml = RE_AMPERSAND.sub('&amp;', xml)
 
-		show_id = matches.group(1)
-		xmlcontent = HTTP.Request('http://www.hgtv.com/hgtv/channel/xml/0,,%s,00.xml' % show_id).content.strip()
-		
-		for c in XML.ElementFromString(xmlcontent).xpath("//video"):
+	for c in XML.ElementFromString(xml).xpath("//video"):
+		try:
 			title = c.xpath("./clipName")[0].text.strip()
+			duration = GetDurationFromString(c.xpath("./length")[0].text)
+			desc = c.xpath("./abstract")[0].text
+			videoId = c.xpath("./videoId")[0].text
+			thumb_url = c.xpath("./thumbnailUrl")[0].text.replace('_92x69.jpg', '_480x360.jpg')
+			Log("========================================")
+			Log(thumb_url)
+			Log("========================================")
 
-			duration = GetDurationFromString(c.xpath("length")[0].text)
-			desc = c.xpath("abstract")[0].text
-			videoId = c.xpath("videoId")[0].text
-
-			thumb_url = c.xpath("thumbnailUrl")[0].text
 			oc.add(
 				EpisodeObject(
 					url = VIDEO_URL % (videoId, show_id),
 					title = title,
 					duration = duration,
 					summary = desc,
-					thumb=Resource.ContentsOfURLWithFallback(url=thumb_url, fallback=ICON)
+					thumb = Resource.ContentsOfURLWithFallback(url=thumb_url, fallback=ICON)
 				)
 			)
-	except:
-		oc = MessageContainer("Sorry","This section does not contain any videos")
+		except:
+			pass
+
+	if len(oc) < 1:
+		oc = ObjectContainer(header="Sorry", message="This section does not contain any videos")
 
 	return oc
 
-##################################################################################################
+####################################################################################################
 def GetDurationFromString(duration):
 
 	seconds = 0

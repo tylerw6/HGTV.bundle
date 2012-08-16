@@ -1,3 +1,6 @@
+RE_AMPERSAND = Regex('&(?!amp;)')
+
+####################################################################################################
 def NormalizeURL(url):
 
 	return url
@@ -9,16 +12,17 @@ def GetItemInfo(url,itemInfo):
 	showId = url.split('showId=')[1]
 
 	# NB: must do it this way as the first line of their xml is a carriage return (which makes it invalid)
-	xmlcontent = HTTP.Request('http://www.hgtv.com/hgtv/channel/xml/0,,%s,00.xml' % showId).content.strip()
+	xml = HTTP.Request('http://www.hgtv.com/hgtv/channel/xml/0,,%s,00.xml' % showId).content.strip()
+	xml = RE_AMPERSAND.sub('&amp;', xml)
 
-	c = XML.ElementFromString(xmlcontent).xpath("//video/videoId[text()='%s']/parent::video" % videoId)[0]
+	c = XML.ElementFromString(xml).xpath("//video/videoId[text()='%s']/parent::video" % videoId)[0]
 
 	if itemInfo == "Metadata":
 		title = c.xpath("./clipName")[0].text
 		show = c.xpath("./showName")[0].text
 		duration = GetDurationFromString(c.xpath("./length")[0].text)
 		summary = c.xpath("./abstract")[0].text
-		thumb = c.xpath("./thumbnailUrl")[0].text
+		thumb = c.xpath("./thumbnailUrl")[0].text.replace('_92x69.jpg', '_480x360.jpg')
 
 		return EpisodeObject(
 			title = title,
