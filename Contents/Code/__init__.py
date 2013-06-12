@@ -53,6 +53,23 @@ def MainMenu():
 			)
 		)
 
+	# There are a couple of shows missing from the "full episodes" listings, let's add these as well
+	moreShows = {}
+	moreShows['Property Brothers'] = 'http://www.hgtv.com/hgtv-property-brothers/videos/index.html'
+	moreShows['Candace Tells All'] = 'http://www.hgtv.com/candice-tells-all-full-episodes/videos/index.html'
+
+	for s in moreShows.keys():
+		oc.add(
+			DirectoryObject(
+				key = Callback(GetSeasons, path=moreShows[s], title=s, thumb_url=''),
+				title = s,
+				thumb = Resource.ContentsOfURLWithFallback(url='', fallback=ICON)
+			)
+		)
+		
+	# sort our shows into alphabetical order here
+	oc.objects.sort(key = lambda obj: obj.title)
+	
 	return oc
 
 ####################################################################################################
