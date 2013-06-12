@@ -1,11 +1,8 @@
 NAME = "HGTV"
-ART = "art-default.jpg"
-ICON = "icon-default.png"
+BASE_URL = "http://www.hgtv.com"
 
 # Full Episode URLs
 SHOW_LINKS_URL = "http://www.hgtv.com/full-episodes/package/index.html"
-
-BASE_URL = "http://www.hgtv.com"
 
 # NB: this is a "made up" URL, they don't have direct play URLs
 # for videos (actually they do have direct play URLs but almost never use them)
@@ -20,18 +17,11 @@ RE_AMPERSAND = Regex('&(?!amp;)')
 ####################################################################################################
 def Start():
 
-	Plugin.AddPrefixHandler("/video/hgtv", MainMenu, NAME, ICON, ART)
-	Plugin.AddViewGroup("List", viewMode="List", mediaType="items")
-
 	ObjectContainer.title1 = NAME
-	ObjectContainer.content = 'Items'
-	ObjectContainer.art = R(ART)
-
-	DirectoryObject.thumb = R(ICON)
-
 	HTTP.CacheTime = CACHE_1HOUR
 
 ####################################################################################################
+@handler('/video/hgtv', NAME)
 def MainMenu():
 
 	oc = ObjectContainer()
@@ -42,37 +32,37 @@ def MainMenu():
 		if title == "Featured Series":
 			continue
 
-		url = s.xpath("../p[@class='cta']/a")[0].get('href')
-		thumb_url = s.xpath("../a/img")[0].get('src')
+		url = s.xpath("./../p[@class='cta']/a/@href")[0]
+		thumb_url = s.xpath("./../a/img/@src")[0]
 
 		oc.add(
 			DirectoryObject(
 				key = Callback(GetSeasons, path=BASE_URL + url, title=title, thumb_url=thumb_url),
 				title = title,
-				thumb = Resource.ContentsOfURLWithFallback(url=thumb_url, fallback=ICON)
+				thumb = Resource.ContentsOfURLWithFallback(url=thumb_url)
 			)
 		)
 
 	# There are a couple of shows missing from the "full episodes" listings, let's add these as well
-	moreShows = {}
-	moreShows['Property Brothers'] = 'http://www.hgtv.com/hgtv-property-brothers/videos/index.html'
-	moreShows['Candace Tells All'] = 'http://www.hgtv.com/candice-tells-all-full-episodes/videos/index.html'
+	more_shows = {}
+	more_shows['Property Brothers'] = 'http://www.hgtv.com/hgtv-property-brothers/videos/index.html'
+	more_shows['Candace Tells All'] = 'http://www.hgtv.com/candice-tells-all-full-episodes/videos/index.html'
 
-	for s in moreShows.keys():
+	for s in more_shows.keys():
 		oc.add(
 			DirectoryObject(
-				key = Callback(GetSeasons, path=moreShows[s], title=s, thumb_url=''),
-				title = s,
-				thumb = Resource.ContentsOfURLWithFallback(url='', fallback=ICON)
+				key = Callback(GetSeasons, path=more_shows[s], title=s, thumb_url=''),
+				title = s
 			)
 		)
-		
+
 	# sort our shows into alphabetical order here
 	oc.objects.sort(key = lambda obj: obj.title)
-	
+
 	return oc
 
 ####################################################################################################
+@route('/video/hgtv/seasons')
 def GetSeasons(path, title, thumb_url):
 
 	oc = ObjectContainer(title2=title)
@@ -90,7 +80,7 @@ def GetSeasons(path, title, thumb_url):
 			DirectoryObject(
 				key = Callback(GetShows, path=path, title=title),
 				title = title,
-				thumb = Resource.ContentsOfURLWithFallback(url=thumb_url, fallback=ICON)
+				thumb = Resource.ContentsOfURLWithFallback(url=thumb_url)
 			)
 		)
 	except:
@@ -108,7 +98,7 @@ def GetSeasons(path, title, thumb_url):
 				DirectoryObject(
 					key = Callback(GetShows, path= BASE_URL + url, title=title),
 					title = title,
-					thumb = Resource.ContentsOfURLWithFallback(url=thumb_url, fallback=ICON)
+					thumb = Resource.ContentsOfURLWithFallback(url=thumb_url)
 				)
 			)
 		except:
@@ -120,6 +110,7 @@ def GetSeasons(path, title, thumb_url):
 	return oc
 
 ####################################################################################################
+@route('/video/hgtv/shows')
 def GetShows(path, title):
 
 	oc = ObjectContainer(title2=title)
@@ -133,18 +124,18 @@ def GetShows(path, title):
 	for c in XML.ElementFromString(xml).xpath("//video"):
 		try:
 			title = c.xpath("./clipName")[0].text.strip()
-			duration = GetDurationFromString(c.xpath("./length")[0].text)
+			duration = Datetime.MillisecondsFromString(c.xpath("./length")[0].text)
 			desc = c.xpath("./abstract")[0].text
-			videoId = c.xpath("./videoId")[0].text
+			video_id = c.xpath("./videoId")[0].text
 			thumb_url = c.xpath("./thumbnailUrl")[0].text.replace('_92x69.jpg', '_480x360.jpg')
 
 			oc.add(
 				EpisodeObject(
-					url = VIDEO_URL % (videoId, show_id),
+					url = VIDEO_URL % (video_id, show_id),
 					title = title,
 					duration = duration,
 					summary = desc,
-					thumb = Resource.ContentsOfURLWithFallback(url=thumb_url, fallback=ICON)
+					thumb = Resource.ContentsOfURLWithFallback(url=thumb_url)
 				)
 			)
 		except:
@@ -154,19 +145,3 @@ def GetShows(path, title):
 		oc = ObjectContainer(header="Sorry", message="This section does not contain any videos")
 
 	return oc
-
-####################################################################################################
-def GetDurationFromString(duration):
-
-	seconds = 0
-
-	try:
-		duration = duration.split(':')
-		duration.reverse()
-
-		for i in range(0, len(duration)):
-			seconds += int(duration[i]) * (60**i)
-	except:
-		pass
-
-	return seconds * 1000
