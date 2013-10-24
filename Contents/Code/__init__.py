@@ -1,4 +1,3 @@
-# ALSO CHANGED TABBING TO 4 SPACES THROUGHOUT CODE 
 NAME = "HGTV"
 BASE_URL = "http://www.hgtv.com"
 
