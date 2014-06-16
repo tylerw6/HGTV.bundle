@@ -1,4 +1,6 @@
 RE_AMPERSAND = Regex('&(?!amp;)')
+RTMP_URL = 'rtmp://flash.scrippsnetworks.com:1935/ondemand?ovpfv=1.1'
+SWF_URL = 'http://common.scrippsnetworks.com/common/snap/snap-3.0.3.swf'
 
 ####################################################################################################
 def NormalizeURL(url):
@@ -28,7 +30,9 @@ def MetadataObjectForURL(url):
 def MediaObjectsForURL(url):
 
 	xml = GetXML(url)
-	url = xml.xpath('./videoUrl')[0].text.replace('http://wms','rtmp://flash').replace('.wmv','').replace('scrippsnetworks.com/','scrippsnetworks.com/ondemand/&').split('&')
+	clip = xml.xpath('./videoUrl/text()')[0].split('scrippsnetworks.com')[-1].split('.wmv')[0]
+
+	#Log(' --> RTMPDump test command line: rtmpdump -r "%s" -y "%s" -W "%s" -o output.flv' % (RTMP_URL, clip, SWF_URL))
 
 	return [
 		MediaObject(
@@ -36,7 +40,7 @@ def MediaObjectsForURL(url):
 			audio_channels = 2,
 			parts = [
 				PartObject(
-					key = RTMPVideoURL(url=url[0], clip=url[1])
+					key = RTMPVideoURL(url=RTMP_URL, clip=clip, swf_url=SWF_URL)
 				)
 			]
 		)
