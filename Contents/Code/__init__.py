@@ -1,8 +1,10 @@
 NAME = "HGTV"
+PREFIX = '/video/hgtv'
 BASE_URL = "http://www.hgtv.com"
 
 # Full Episode URLs
-SHOW_LINKS_URL = "http://www.hgtv.com/full-episodes/package/index.html"
+FULLEP_URL = "http://www.hgtv.com/hgtv-full-episodes/videos/index.html"
+SHOW_LINKS_URL = "http://www.hgtv.com/on-tv/index.html"
 
 # NB: this is a "made up" URL, they don't have direct play URLs
 # for videos (actually they do have direct play URLs but almost never use them)
@@ -13,7 +15,31 @@ VIDEO_URL = "http://www.hgtv.com/video/?videoId=%s&showId=%s"
 
 VPLAYER_MATCHES = Regex("SNI.HGTV.Player.FullSize\('vplayer-1','([^']*)'")
 RE_AMPERSAND = Regex('&(?!amp;)')
+RE_SEASON  = Regex('Season (\d{1,2})')
+RE_EP = Regex('Ep. (\d{1,3})')
 
+# Below is a compiled list of shows known to have a Full Episodes link on its show page and the URL for that full episode page
+TOP_SHOWS = [ {'name' : 'All American Handyman', 'url' : 'http://www.hgtv.com/hgtv-all-american-handyman/videos/index.html'},
+              {'name' : 'Brother vs Brother', 'url' : 'http://www.hgtv.com/hgtv/video/player/0,1000149,HGTV_32796_15241_78444-119114,00.html'},
+              {'name' : 'Bang for Your Buck', 'url' : 'http://www.hgtv.com/hgtv-bang-for-your-buck/videos/index.html'},
+              {'name' : 'Color Splash', 'url' : 'http://www.hgtv.com/hgtv74/videos/index.html'},
+               {'name' : 'Curb Appeal',  'url' : 'http://www.hgtv.com/hgtv42/videos/index.html'},
+              {'name' : "HGTV'd", 'url' : 'http://www.hgtv.com/hgtv-hgtvd/videos/index.html'}, 
+              {'name' : 'HGTV Design Star', 'url' : 'http://www.hgtv.com/hgtv/video/player/0,1000149,HGTV_32796_15041_77321-117842,00.html'}, 
+              {'name' : 'House Crashers', 'url' : 'http://www.hgtv.com/hgtv-house-crashers/videos/index.html'},
+              {'name' : 'House Hunters', 'url' : 'http://www.hgtv.com/hgtv40/videos/index.html'},
+              {'name' : 'House Hunters International', 'url' : 'http://www.hgtv.com/hgtv56/videos/index.html'},
+              {'name' : 'House Hunters Renovation', 'url' : 'http://www.hgtv.com/hgtv-house-hunters-renovation2/videos/index.html'},
+              {'name' : 'My First Place', 'url' : 'http://www.hgtv.com/hgtv58/videos/index.html'},
+              {'name' : 'My Yard Goes Disney', 'url' : 'http://www.hgtv.com/hgtv-my-yard-goes-disney/videos/index.html'},
+              {'name' : 'Property Brothers', 'url' : 'http://www.hgtv.com/hgtv-property-brothers/videos/index.html'},
+              {'name' : 'Property Virgins', 'url' : 'http://www.hgtv.com/hgtv48/videos/index.html'},
+              {'name' : 'Selling New York', 'url' : 'http://www.hgtv.com/hgtv-selling-new-york/videos/index.html'},
+              {'name' : 'The Antonio Treatment', 'url' : 'http://www.hgtv.com/hgtv-the-antonio-treatment/videos/index.html'}
+               ]
+
+# This regex can be used to pull the banner image at the top of every page but hard to read for some shows (RE_LOGO.search(content).group(1))
+#RE_LOGO = Regex('background-image: url\((.+?)\);')
 ####################################################################################################
 def Start():
 
@@ -21,227 +47,174 @@ def Start():
     HTTP.CacheTime = CACHE_1HOUR
 
 ####################################################################################################
-@handler('/video/hgtv', NAME)
+@handler(PREFIX, NAME, thumb=ICON)
 def MainMenu():
 
     oc = ObjectContainer()
+    oc.add(DirectoryObject(key = Callback(ShowMenu, title="Top HGTV Shows"), title="Top HGTV Shows"))
+    oc.add(DirectoryObject(key = Callback(GetSections, path=FULLEP_URL, title="Full Episodes"), title="Full Episodes"))
+    oc.add(DirectoryObject(key = Callback(Alphabet, title="All HGTV Shows"), title="All HGTV Shows"))
+    return oc
+####################################################################################################
+# This function produces a list of shows known to have full episodes
+@route(PREFIX + '/showmenu')
+def ShowMenu(title):
 
-    more_shows = {}
-    # ljunkie - haven't found a way to get a listing from the site - these are were "guessed" and verified 
-    more_shows['Brother Vs. Brother'] = 'http://www.hgtv.com/hgtv/video/player/0,1000149,HGTV_32796_15241_78444-119114,00.html'
-    more_shows['15 Bodacious Backyards'] = 'http://www.hgtv.com/hgtv-15-bodacious-backyards/videos/index.html'
-    more_shows['15 Fresh Handmade Gift Ideas'] = 'http://www.hgtv.com/hgtv-15-fresh-handmade-gift-ideas/videos/index.html'
-    more_shows['25 Great Holiday Ideas'] = 'http://www.hgtv.com/hgtv-25-great-holiday-ideas/videos/index.html'
-    more_shows['All American Handyman'] = 'http://www.hgtv.com/hgtv-all-american-handyman/videos/index.html'
-    more_shows['Amazing Water Homes'] = 'http://www.hgtv.com/hgtv-amazing-water-homes/videos/index.html'
-    more_shows['Amazing Waterfront Homes'] = 'http://www.hgtv.com/hgtv-amazing-waterfront-homes/videos/index.html'
-    more_shows['B. Original'] = 'http://www.hgtv.com/hgtv-b-original/videos/index.html'
-    more_shows['Bang for Your Buck'] = 'http://www.hgtv.com/hgtv-bang-for-your-buck/videos/index.html'
-    more_shows['Bath Crashers'] = 'http://www.hgtv.com/hgtv-bath-crashers/videos/index.html'
-    more_shows['Bathtastic!'] = 'http://www.hgtv.com/hgtv-bathtastic/videos/index.html'
-    more_shows['Battle On the Block'] = 'http://www.hgtv.com/hgtv-battle-on-the-block/videos/index.html'
-    more_shows['Beautiful Homes'] = 'http://www.hgtv.com/hgtv-beautiful-homes/videos/index.html'
-    more_shows['Behind the Magic: Disney Holidays'] = 'http://www.hgtv.com/hgtv-behind-the-magic-disney-holidays/videos/index.html'
-    more_shows['Beyond Repair'] = 'http://www.hgtv.com/hgtv-beyond-repair/videos/index.html'
-    more_shows['Bought & Sold'] = 'http://www.hgtv.com/hgtv-bought-sold/videos/index.html'
-    more_shows['Brother Vs. Brother'] = 'http://www.hgtv.com/hgtv-brother-vs-brother/videos/index.html'
-    more_shows['Candice Tells All'] = 'http://www.hgtv.com/hgtv-candice-tells-all/videos/index.html'
-    more_shows['Celebrity Holiday Homes '] = 'http://www.hgtv.com/hgtv-celebrity-holiday-homes/videos/index.html'
-    more_shows['Celebrity Motor Homes'] = 'http://www.hgtv.com/hgtv-celebrity-motor-homes/videos/index.html'
-    more_shows['Closet Cases'] = 'http://www.hgtv.com/hgtv-closet-cases/videos/index.html'
-    more_shows['Cool Pools'] = 'http://www.hgtv.com/hgtv-cool-pools/videos/index.html'
-    more_shows['Cousins Undercover'] = 'http://www.hgtv.com/hgtv-cousins-undercover/videos/index.html'
-    more_shows['Cousins on Call'] = 'http://www.hgtv.com/hgtv-cousins-on-call/videos/index.html'
-    more_shows['Deck Wars'] = 'http://www.hgtv.com/hgtv-deck-wars/videos/index.html'
-    more_shows['Decked Out'] = 'http://www.hgtv.com/hgtv-decked-out/videos/index.html'
-    more_shows['Deserving Design'] = 'http://www.hgtv.com/hgtv-deserving-design/videos/index.html'
-    more_shows['Design Remix'] = 'http://www.hgtv.com/hgtv-design-remix/videos/index.html'
-    more_shows['Dina\'s Party'] = 'http://www.hgtv.com/hgtv-dinas-party/videos/index.html'
-    more_shows['Donna Decorates Dallas'] = 'http://www.hgtv.com/hgtv-donna-decorates-dallas/videos/index.html'
-    more_shows['Double Take'] = 'http://www.hgtv.com/hgtv-double-take/videos/index.html'
-    more_shows['Elbow Room'] = 'http://www.hgtv.com/hgtv-elbow-room/videos/index.html'
-    more_shows['Endless Yard Sale'] = 'http://www.hgtv.com/hgtv-endless-yard-sale/videos/index.html'
-    more_shows['Extreme Homes'] = 'http://www.hgtv.com/hgtv-extreme-homes/videos/index.html'
-    more_shows['First Time Design'] = 'http://www.hgtv.com/hgtv-first-time-design/videos/index.html'
-    more_shows['Flea Market Flip'] = 'http://www.hgtv.com/hgtv-flea-market-flip/videos/index.html'
-    more_shows['Going Yard'] = 'http://www.hgtv.com/hgtv-going-yard/videos/index.html'
-    more_shows['HGTV\'d'] = 'http://www.hgtv.com/hgtv-hgtvd/videos/index.html'
-    more_shows['HGTV Design Star'] = 'http://www.hgtv.com/hgtv-design-star/videos/index.html'
-    more_shows['HGTV Home Makeover'] = 'http://www.hgtv.com/hgtv-home-makeover/videos/index.html'
-    more_shows['HGTV Outrageous'] = 'http://www.hgtv.com/hgtv-hgtv-outrageous/videos/index.html'
-    more_shows['HGTV Showdown'] = 'http://www.hgtv.com/hgtv-hgtv-showdown/videos/index.html'
-    more_shows['HGTV Star'] = 'http://www.hgtv.com/hgtv-hgtv-star/videos/index.html'
-    more_shows['HGTV Summer Showdown'] = 'http://www.hgtv.com/hgtv-hgtv-summer-showdown/videos/index.html'
-    more_shows['HGTV: The Making of Our Magazine'] = 'http://www.hgtv.com/hgtv-hgtv-the-making-of-our-magazine/videos/index.html'
-    more_shows['Halloween Block Party'] = 'http://www.hgtv.com/hgtv-halloween-block-party/videos/index.html'
-    more_shows['Hollywood for Sale'] = 'http://www.hgtv.com/hgtv-hollywood-for-sale/videos/index.html'
-    more_shows['Home Rules'] = 'http://www.hgtv.com/hgtv-home-rules/videos/index.html'
-    more_shows['Home Strange Home'] = 'http://www.hgtv.com/hgtv-home-strange-home/videos/index.html'
-    more_shows['Home by Novogratz'] = 'http://www.hgtv.com/hgtv-home-by-novogratz/videos/index.html'
-    more_shows['Home for the Holidays'] = 'http://www.hgtv.com/hgtv-home-for-the-holidays/videos/index.html'
-    more_shows['House Crashers'] = 'http://www.hgtv.com/hgtv-house-crashers/videos/index.html'
-    more_shows['House Hunters Renovation'] = 'http://www.hgtv.com/hgtv-house-hunters-renovation/videos/index.html'
-    more_shows['House Hunters: Where Are They Now?'] = 'http://www.hgtv.com/hgtv-house-hunters-where-are-they-now/videos/index.html'
-    more_shows['I Brake For Yard Sales'] = 'http://www.hgtv.com/hgtv-i-brake-for-yard-sales/videos/index.html'
-    more_shows['Kitchen Impossible'] = 'http://www.hgtv.com/hgtv-kitchen-impossible/videos/index.html'
-    more_shows['Love It Or List It'] = 'http://www.hgtv.com/hgtv-love-it-or-list-it/videos/index.html'
-    more_shows['Love It or List It, Too'] = 'http://www.hgtv.com/hgtv-love-it-or-list-it-too/videos/index.html'
-    more_shows['Million Dollar Contractor'] = 'http://www.hgtv.com/hgtv-million-dollar-contractor/videos/index.html'
-    more_shows['Million Dollar Rooms'] = 'http://www.hgtv.com/hgtv-million-dollar-rooms/videos/index.html'
-    more_shows['Mom Caves'] = 'http://www.hgtv.com/hgtv-mom-caves/videos/index.html'
-    more_shows['My Favorite Place'] = 'http://www.hgtv.com/hgtv-my-favorite-place/videos/index.html'
-    more_shows['My First Place: Lessons Learned'] = 'http://www.hgtv.com/hgtv-my-first-place-lessons-learned/videos/index.html'
-    more_shows['My First Renovation'] = 'http://www.hgtv.com/hgtv-my-first-renovation/videos/index.html'
-    more_shows['My First Sale'] = 'http://www.hgtv.com/hgtv-my-first-sale/videos/index.html'
-    more_shows['My House Goes Disney'] = 'http://www.hgtv.com/hgtv-my-house-goes-disney/videos/index.html'
-    more_shows['My Yard Goes Disney'] = 'http://www.hgtv.com/hgtv-my-yard-goes-disney/videos/index.html'
-    more_shows['Myles of Style'] = 'http://www.hgtv.com/hgtv-myles-of-style/videos/index.html'
-    more_shows['Paint Over'] = 'http://www.hgtv.com/hgtv-paint-over/videos/index.html'
-    more_shows['Posh Pets: Lifestyles of the Rich and Furry'] = 'http://www.hgtv.com/hgtv-posh-pets-lifestyles-of-the-rich-and-furry/videos/index.html'
-    more_shows['Professional Grade'] = 'http://www.hgtv.com/hgtv-professional-grade/videos/index.html'
-    more_shows['Property Brothers'] = 'http://www.hgtv.com/hgtv-property-brothers/videos/index.html'
-    more_shows['Pumpkin Wars'] = 'http://www.hgtv.com/hgtv-pumpkin-wars/videos/index.html'
-    more_shows['Rate My Space'] = 'http://www.hgtv.com/hgtv-rate-my-space/videos/index.html'
-    more_shows['Rehab Addict'] = 'http://www.hgtv.com/hgtv-rehab-addict/videos/index.html'
-    more_shows['Renovation Raiders'] = 'http://www.hgtv.com/hgtv-renovation-raiders/videos/index.html'
-    more_shows['Room Crashers'] = 'http://www.hgtv.com/hgtv-room-crashers/videos/index.html'
-    more_shows['Run My Makeover'] = 'http://www.hgtv.com/hgtv-run-my-makeover/videos/index.html'
-    more_shows['Scoring the Deal'] = 'http://www.hgtv.com/hgtv-scoring-the-deal/videos/index.html'
-    more_shows['Secrets From a Stylist'] = 'http://www.hgtv.com/hgtv-secrets-from-a-stylist/videos/index.html'
-    more_shows['Selling LA'] = 'http://www.hgtv.com/hgtv-selling-la/videos/index.html'
-    more_shows['Selling New York'] = 'http://www.hgtv.com/hgtv-selling-new-york/videos/index.html'
-    more_shows['Selling Spelling Manor'] = 'http://www.hgtv.com/hgtv-selling-spelling-manor/videos/index.html'
-    more_shows['The Antonio Treatment'] = 'http://www.hgtv.com/hgtv-the-antonio-treatment/videos/index.html'
-    more_shows['The Duchess'] = 'http://www.hgtv.com/hgtv-the-duchess/videos/index.html'
-    more_shows['The High Low Project'] = 'http://www.hgtv.com/hgtv-the-high-low-project/videos/index.html'
-    more_shows['Tough as Nails'] = 'http://www.hgtv.com/hgtv-tough-as-nails/videos/index.html'
-    more_shows['Weekday Crafternoon'] = 'http://www.hgtv.com/hgtv-weekday-crafternoon/videos/index.html'
-    more_shows['West End Salvage'] = 'http://www.hgtv.com/hgtv-west-end-salvage/videos/index.html'
+    oc = ObjectContainer(title2=title)
 
-    for s in more_shows.keys():
-        oc.add(
-            DirectoryObject(
-                key = Callback(GetSeasons, path=more_shows[s], title=s, thumb_url=''),
-                title = s
-            )
-        )
+    for show in TOP_SHOWS:
+        title = show['name']
+        url = show['url']
+        oc.add(DirectoryObject(key = Callback(GetSections, path=url, title=title), title = title))
 
     # sort our shows into alphabetical order here
     oc.objects.sort(key = lambda obj: obj.title)
 
-    return oc
-
+    if len(oc) < 1:
+        return ObjectContainer(header="Empty", message="There are no shows to list")
+    else:
+        return oc
 ####################################################################################################
-@route('/video/hgtv/seasons')
-def GetSeasons(path, title, thumb_url):
+# A to Z pull for HGTV
+@route(PREFIX + '/alphabet')
+def Alphabet(title):
+    oc = ObjectContainer(title2=title)
+    for ch in list('#ABCDEFGHIJKLMNOPQRSTUVWXYZ'):
+        oc.add(DirectoryObject(key=Callback(AllShows, title=ch, ch=ch), title=ch))
+    return oc
+####################################################################################################
+# This function produces a list of all HGTV Shows
+@route(PREFIX + '/allshows')
+def AllShows(title, ch):
+
+    oc = ObjectContainer()
+
+    for s in HTML.ElementFromURL(SHOW_LINKS_URL).xpath('//div[@id="dm-shows-az"]/ul/li/a'):
+        title = s.text
+        if title.startswith(ch) or (title[0].isalpha()==False and ch=='#'):
+            show_url = s.xpath("./@href")[0]
+            oc.add(DirectoryObject(key = Callback(GetVideoLinks, show_url=show_url, title=title), title = title))
+
+    # sort our shows into alphabetical order here
+    oc.objects.sort(key = lambda obj: obj.title)
+    if len(oc) < 1:
+        return ObjectContainer(header="Empty", message="There are no shows to list")
+    else:
+        return oc
+####################################################################################################
+# This function pulls the video and full episode links from a show's main page
+@route(PREFIX + '/getvideolinks')
+def GetVideoLinks(title, show_url):
 
     oc = ObjectContainer(title2=title)
-    html = HTTP.Request(path).content
-    # Moved this element call to top and changed it to use content, since it may also be used for finding the video link
-    data = HTML.ElementFromString(html)
-    # A few of the Watch Full Episodes links pulled in the function above from the full episode page are to the show main page 
-    # instead of the video page. If it is a show main page, we use that main show page to find that show's video page link
-    if path.endswith('show/index.html'):
-    # VIDEO PAGE DOES NOT ALWAYS FOLLOW THE SAME NAMING SCHEME AS MAIN PAGE, SO WE CANNOT JUST CHANGE PATH NAME TO VIDEO FOLDER
-    # There appears to be two different formats for show pages. Either show has a full episode button at the top or
-    # the page has a bar of links that run across the top of the page tha include a video section
-        try:
-            # Look for full episode button
-            new_path = BASE_URL + data.xpath('//ul[@class="button-nav"]/li/a//@href')[1]
-        except:
-            # Look for the videos link in the top bar
-            try:
-                new_path = data.xpath('//li[contains(@class,"tab-videos emroom")]/a/@href')[0]
-            except:
-            # HGTV design star is changing its name and base url from HGTV Design Star (/hgtv-design-star/) to HGTV Star(/hgtv-star/).
-            # Currently the full episode page still uses the old main show url (http://www.hgtv.com/hgtv-design-star/show/index.html).
-            # To prevent errors from any future changes they may make, added an exception for the old show's base url.
-                if '/hgtv-design-star/' in path:
-                    new_path = 'http://www.hgtv.com/hgtv/video/player/0,1000149,HGTV_32796_15041_77321-117842,00.html'
-                else:
-                    pass
-        # Then we have to add the parses for the new path and make value of path is the new path, since that variable is sent to next function
-        html = HTTP.Request(new_path).content
-        data = HTML.ElementFromString(html)
-        path = new_path
-    matches = VPLAYER_MATCHES.search(html)
+    data = HTML.ElementFromURL(BASE_URL + show_url)
+    # Get the link for the "Videos" and "Full Episode" buttons listed at the top left side of the page for most shows
+    link_list = data.xpath('//ul[@class="button-nav"]/li/a')
+    if link_list > 0:
+        for link in link_list:
+            vid_title = link.xpath('.//text()')[0]
+            if vid_title in ['ABOUT', 'PHOTOS ']:
+                continue
+            vid_url = BASE_URL + link.xpath('./@href')[0]
+            oc.add(DirectoryObject(key = Callback(GetSections, path=vid_url, title=vid_title), title=vid_title))
+    # Get the "Video" link for pages that have the alternative setup like Brother vs Brother and HGTV Star
+    else:
+        vid_url = data.xpath('//li[@class="tab-videos"]/a/@href')[0]
+        vid_title = 'Videos'
+        oc.add(DirectoryObject(key = Callback(GetSections, path=vid_url, title=vid_title), title=vid_title))
+        
+    if len(oc) < 1:
+        return ObjectContainer(header="No Videos", message="This show does not have a video page")
+    else:
+        return oc
+####################################################################################################
+# This function pulls the titles for each carousels sections on a video page and gets the first video URL for that carousel
+# This first video url is later used to pull all the videos that are listed in the video player at the top of the page
+@route(PREFIX + '/getsections')
+def GetSections(path, title):
 
-    # grab the current season link and title only on this pass, grab each season's actual shows in GetShows()
-    try:
+    oc = ObjectContainer(title2=title)
+    content = HTTP.Request(path).content
+    data = HTML.ElementFromString(content)
+
+    matches = VPLAYER_MATCHES.search(content)
+    if matches:
         show_id = matches.group(1)
-        xml = HTTP.Request('http://www.hgtv.com/hgtv/channel/xml/0,,%s,00.xml' % show_id).content.strip()
+        xml = HTTP.Request('http://www.hgtv.com/hgtv/channel/xml/0,,%s,00.xml' %show_id).content.strip()
         xml = RE_AMPERSAND.sub('&amp;', xml)
         title = XML.ElementFromString(xml).xpath("//title/text()")[0].strip()
+        if 'Season' in title:
+            season = int(RE_SEASON.search(title).group(1))
+        else:
+            season = 0
+        oc.add(DirectoryObject(key = Callback(GetShows, path=path, season=season, title=title), title=title))
+    else:
+        return ObjectContainer(header="Empty", message="There are no videos to list right now.")
+        #pass
 
-        oc.add(
-            DirectoryObject(
-                key = Callback(GetShows, path=path, title=title),
-                title = title,
-                thumb = Resource.ContentsOfURLWithFallback(url=thumb_url)
-            )
-        )
-    except:
-        pass
-
-    # now try to grab any additional seasons/listings via xpath
-
-    for season in data.xpath("//ul[@class='channel-list']/li"):
-        try:
-            title = season.xpath("./h4/text()")[0].strip()
-            url = season.xpath("./div/div[@class='crsl-wrap']/ul/li[1]/a/@href")[0]
-
-            oc.add(
-                DirectoryObject(
-                    key = Callback(GetShows, path= BASE_URL + url, title=title),
-                    title = title,
-                    thumb = Resource.ContentsOfURLWithFallback(url=thumb_url)
-                )
-            )
-        except:
-            pass
+    # This pulls the data for any additional sections/carousels that may be listed under the video player
+    for section in data.xpath("//ul[@class='channel-list']/li"):
+        title = section.xpath("./h4/text()")[0].strip()
+        url = section.xpath("./div/div[@class='crsl-wrap']/ul/li[1]/a/@href")[0]
+        if 'Season' in title:
+            season = int(RE_SEASON.search(title).group(1))
+        else:
+            season = 0
+        oc.add(DirectoryObject(key = Callback(GetShows, path=BASE_URL+url, season=season, title=title), title=title))
 
     if len(oc) < 1:
-        oc = ObjectContainer(header="Sorry", message="This section does not contain any videos")
-
-    return oc
-
+        return ObjectContainer(header="Sorry", message="There are no video sections for this show")
+    else:
+        return oc
 ####################################################################################################
-@route('/video/hgtv/shows')
-def GetShows(path, title):
+# This function produces the videos listed within a particular carousel
+# It takes the first video URL within a section or carousel and uses that URL to get the video player info
+# and its corresponding xml file that list all the data for each video listed under the video player
+@route(PREFIX + '/getshows', season=int)
+def GetShows(path, title, season):
 
     oc = ObjectContainer(title2=title)
-    html = HTTP.Request(path).content
-    matches = VPLAYER_MATCHES.search(html)
+    content = HTTP.Request(path).content
+    matches = VPLAYER_MATCHES.search(content)
 
     show_id = matches.group(1)
     xml = HTTP.Request('http://www.hgtv.com/hgtv/channel/xml/0,,%s,00.xml' % show_id).content.strip()
     xml = RE_AMPERSAND.sub('&amp;', xml)
 
     for c in XML.ElementFromString(xml).xpath("//video"):
-        try:
-            title = c.xpath("./clipName")[0].text.strip()
-            duration = Datetime.MillisecondsFromString(c.xpath("./length")[0].text)
-            desc = c.xpath("./abstract")[0].text
-            # Added source network since available and not always HGTV
-            source = c.xpath("./sourceNetwork")[0].text
-            video_id = c.xpath("./videoId")[0].text
-            thumb_url = c.xpath("./thumbnailUrl")[0].text.replace('_92x69.jpg', '_480x360.jpg')
-
+        title = c.xpath("./clipName")[0].text.strip()
+        duration = Datetime.MillisecondsFromString(c.xpath("./length")[0].text)
+        desc = c.xpath("./abstract")[0].text
+        video_id = c.xpath("./videoId")[0].text
+        thumb_url = c.xpath("./thumbnailUrl")[0].text.replace('_92x69.jpg', '_480x360.jpg')
+        if season > 0 or 'Ep.' in title:
+            if 'Ep.' in title:
+                episode = int(RE_EP.search(title).group(1))
+            else:
+                episode = 0
             oc.add(
-                # Changed this to an VideoClipObject since not including episode or season data so no ? marks in results. 
+                EpisodeObject(
+                    url = VIDEO_URL % (video_id, show_id),
+                    title = title,
+                    duration = duration,
+                    summary = desc,
+                    index = episode,
+                    season = season,
+                    thumb = Resource.ContentsOfURLWithFallback(url=thumb_url)
+                )
+            )
+        else:
+            oc.add(
                 VideoClipObject(
                     url = VIDEO_URL % (video_id, show_id),
                     title = title,
                     duration = duration,
                     summary = desc,
-                    source_title = source,
                     thumb = Resource.ContentsOfURLWithFallback(url=thumb_url)
                 )
             )
-        except:
-            pass
 
     if len(oc) < 1:
-        oc = ObjectContainer(header="Sorry", message="This section does not contain any videos")
-
-    return oc
+        return ObjectContainer(header="Sorry", message="This section does not contain any videos")
+    else:
+        return oc
