@@ -47,7 +47,7 @@ def Start():
     HTTP.CacheTime = CACHE_1HOUR
 
 ####################################################################################################
-@handler(PREFIX, NAME, thumb=ICON)
+@handler(PREFIX, NAME)
 def MainMenu():
 
     oc = ObjectContainer()
