@@ -2,44 +2,11 @@ NAME = "HGTV"
 PREFIX = '/video/hgtv'
 BASE_URL = "http://www.hgtv.com"
 
-# Full Episode URLs
-FULLEP_URL = "http://www.hgtv.com/hgtv-full-episodes/videos/index.html"
-SHOW_LINKS_URL = "http://www.hgtv.com/on-tv/index.html"
+FULLEP_URL = "http://www.hgtv.com/shows/full-episodes"
+SHOW_LINKS_URL = "http://www.hgtv.com/shows/shows-a-z"
 
-# NB: this is a "made up" URL, they don't have direct play URLs
-# for videos (actually they do have direct play URLs but almost never use them)
-# and even their listing pages are all over the map
-# therefore the URL service is local (within the plugin) as opposed
-# to putting it globally within the services.bundle for use with PlexIt and the like
-VIDEO_URL = "http://www.hgtv.com/video/?videoId=%s&showId=%s"
+NAMESPACES = {"a":"http://www.w3.org/2005/SMIL21/Language"}
 
-VPLAYER_MATCHES = Regex("SNI.HGTV.Player.FullSize\('vplayer-1','([^']*)'")
-RE_AMPERSAND = Regex('&(?!amp;)')
-RE_SEASON  = Regex('Season (\d{1,2})')
-RE_EP = Regex('Ep. (\d{1,3})')
-
-# Below is a compiled list of shows known to have a Full Episodes link on its show page and the URL for that full episode page
-TOP_SHOWS = [ {'name' : 'All American Handyman', 'url' : 'http://www.hgtv.com/hgtv-all-american-handyman/videos/index.html'},
-              {'name' : 'Brother vs Brother', 'url' : 'http://www.hgtv.com/hgtv/video/player/0,1000149,HGTV_32796_15241_78444-119114,00.html'},
-              {'name' : 'Bang for Your Buck', 'url' : 'http://www.hgtv.com/hgtv-bang-for-your-buck/videos/index.html'},
-              {'name' : 'Color Splash', 'url' : 'http://www.hgtv.com/hgtv74/videos/index.html'},
-               {'name' : 'Curb Appeal',  'url' : 'http://www.hgtv.com/hgtv42/videos/index.html'},
-              {'name' : "HGTV'd", 'url' : 'http://www.hgtv.com/hgtv-hgtvd/videos/index.html'}, 
-              {'name' : 'HGTV Design Star', 'url' : 'http://www.hgtv.com/hgtv/video/player/0,1000149,HGTV_32796_15041_77321-117842,00.html'}, 
-              {'name' : 'House Crashers', 'url' : 'http://www.hgtv.com/hgtv-house-crashers/videos/index.html'},
-              {'name' : 'House Hunters', 'url' : 'http://www.hgtv.com/hgtv40/videos/index.html'},
-              {'name' : 'House Hunters International', 'url' : 'http://www.hgtv.com/hgtv56/videos/index.html'},
-              {'name' : 'House Hunters Renovation', 'url' : 'http://www.hgtv.com/hgtv-house-hunters-renovation2/videos/index.html'},
-              {'name' : 'My First Place', 'url' : 'http://www.hgtv.com/hgtv58/videos/index.html'},
-              {'name' : 'My Yard Goes Disney', 'url' : 'http://www.hgtv.com/hgtv-my-yard-goes-disney/videos/index.html'},
-              {'name' : 'Property Brothers', 'url' : 'http://www.hgtv.com/hgtv-property-brothers/videos/index.html'},
-              {'name' : 'Property Virgins', 'url' : 'http://www.hgtv.com/hgtv48/videos/index.html'},
-              {'name' : 'Selling New York', 'url' : 'http://www.hgtv.com/hgtv-selling-new-york/videos/index.html'},
-              {'name' : 'The Antonio Treatment', 'url' : 'http://www.hgtv.com/hgtv-the-antonio-treatment/videos/index.html'}
-               ]
-
-# This regex can be used to pull the banner image at the top of every page but hard to read for some shows (RE_LOGO.search(content).group(1))
-#RE_LOGO = Regex('background-image: url\((.+?)\);')
 ####################################################################################################
 def Start():
 
@@ -51,52 +18,56 @@ def Start():
 def MainMenu():
 
     oc = ObjectContainer()
-    oc.add(DirectoryObject(key = Callback(ShowMenu, title="Top HGTV Shows"), title="Top HGTV Shows"))
-    oc.add(DirectoryObject(key = Callback(GetSections, path=FULLEP_URL, title="Full Episodes"), title="Full Episodes"))
+    oc.add(DirectoryObject(key = Callback(FullEpMenu, title="Full Episodes"), title="Full Episodes"))
     oc.add(DirectoryObject(key = Callback(Alphabet, title="All HGTV Shows"), title="All HGTV Shows"))
     return oc
 ####################################################################################################
-# This function produces a list of shows known to have full episodes
-@route(PREFIX + '/showmenu')
-def ShowMenu(title):
+# This function produces a list of shows from the HGTV full episodes page
+@route(PREFIX + '/fullepmenu')
+def FullEpMenu(title):
 
     oc = ObjectContainer(title2=title)
 
-    for show in TOP_SHOWS:
-        title = show['name']
-        url = show['url']
-        oc.add(DirectoryObject(key = Callback(GetSections, path=url, title=title), title = title))
+    for item in HTML.ElementFromURL(FULLEP_URL).xpath('//div[@class="parbase editorialPromo section"]//ul/li'):
+        title = item.xpath('.//h4/a/text()')[0]
+        url = item.xpath('./div[@class="media"]/a/@href')[0]
+        thumb = item.xpath('./div[@class="media"]/a/img/@src')[0]
+        desc = item.xpath('.//h4/a/span//text()')[0]
+        oc.add(DirectoryObject(key = Callback(VideoBrowse, url=url, title=title), title=title, thumb=thumb, summary=desc))
 
-    # sort our shows into alphabetical order here
+    # sort shows in alphabetical order here
     oc.objects.sort(key = lambda obj: obj.title)
 
+    if len(oc) < 1:
+        return ObjectContainer(header="Empty", message="There are no full episode shows to list")
+    else:
+        return oc
+####################################################################################################
+# A to Z pull for HGTV shows
+@route(PREFIX + '/alphabet')
+def Alphabet(title):
+    oc = ObjectContainer(title2=title)
+    for ch in HTML.ElementFromURL(SHOW_LINKS_URL).xpath('//section[@class="site-index"]/h2//text()'):
+        title = ch
+        ch = ch.lower()
+        oc.add(DirectoryObject(key=Callback(AllShows, title=title, ch=ch), title=title))
+    
     if len(oc) < 1:
         return ObjectContainer(header="Empty", message="There are no shows to list")
     else:
         return oc
 ####################################################################################################
-# A to Z pull for HGTV
-@route(PREFIX + '/alphabet')
-def Alphabet(title):
-    oc = ObjectContainer(title2=title)
-    for ch in list('#ABCDEFGHIJKLMNOPQRSTUVWXYZ'):
-        oc.add(DirectoryObject(key=Callback(AllShows, title=ch, ch=ch), title=ch))
-    return oc
-####################################################################################################
-# This function produces a list of all HGTV Shows
+# This function produces a list of all HGTV Shows based on letter chosen in Alphabet function
 @route(PREFIX + '/allshows')
 def AllShows(title, ch):
 
-    oc = ObjectContainer()
+    oc = ObjectContainer(title2=title)
 
-    for s in HTML.ElementFromURL(SHOW_LINKS_URL).xpath('//div[@id="dm-shows-az"]/ul/li/a'):
-        title = s.text
-        if title.startswith(ch) or (title[0].isalpha()==False and ch=='#'):
-            show_url = s.xpath("./@href")[0]
-            oc.add(DirectoryObject(key = Callback(GetVideoLinks, show_url=show_url, title=title), title = title))
+    for show in HTML.ElementFromURL(SHOW_LINKS_URL).xpath('//h2[@id="%s"]/following-sibling::ul/li/a' %ch):
+        title = show.text
+        show_url = show.xpath("./@href")[0]
+        oc.add(DirectoryObject(key = Callback(GetVideoLinks, show_url=show_url, title=title), title = title))
 
-    # sort our shows into alphabetical order here
-    oc.objects.sort(key = lambda obj: obj.title)
     if len(oc) < 1:
         return ObjectContainer(header="Empty", message="There are no shows to list")
     else:
@@ -107,114 +78,107 @@ def AllShows(title, ch):
 def GetVideoLinks(title, show_url):
 
     oc = ObjectContainer(title2=title)
-    data = HTML.ElementFromURL(BASE_URL + show_url)
-    # Get the link for the "Videos" and "Full Episode" buttons listed at the top left side of the page for most shows
-    link_list = data.xpath('//ul[@class="button-nav"]/li/a')
-    if link_list > 0:
-        for link in link_list:
-            vid_title = link.xpath('.//text()')[0]
-            if vid_title in ['ABOUT', 'PHOTOS ']:
-                continue
-            vid_url = BASE_URL + link.xpath('./@href')[0]
-            oc.add(DirectoryObject(key = Callback(GetSections, path=vid_url, title=vid_title), title=vid_title))
-    # Get the "Video" link for pages that have the alternative setup like Brother vs Brother and HGTV Star
-    else:
-        vid_url = data.xpath('//li[@class="tab-videos"]/a/@href')[0]
-        vid_title = 'Videos'
-        oc.add(DirectoryObject(key = Callback(GetSections, path=vid_url, title=vid_title), title=vid_title))
+    data = HTML.ElementFromURL(show_url)
+    try:
+        video_url = data.xpath('//div[@class="sub-navigation"]//a[contains(text(), "Videos")]//@href')[0]
+        oc.add(DirectoryObject(key = Callback(VideoBrowse, url=video_url, title="Videos"), title="Videos"))
+    except:
+        pass
+    # there can be more than one full episode link here if there are multiple seasons so make it a list and loop thru
+    try:
+        fullep_list = data.xpath('//div[@class="sub-navigation"]//a[contains(text(), "Full Episodes")]')
+        for item in fullep_list:
+            fullep_url = item.xpath('.//@href')[0]
+            full_title = item.xpath('.//text()')[0]
+            oc.add(DirectoryObject(key = Callback(VideoBrowse, url=fullep_url, title=full_title), title=full_title))
+    except:
+        pass
         
     if len(oc) < 1:
         return ObjectContainer(header="No Videos", message="This show does not have a video page")
     else:
         return oc
 ####################################################################################################
-# This function pulls the titles for each carousels sections on a video page and gets the first video URL for that carousel
-# This first video url is later used to pull all the videos that are listed in the video player at the top of the page
-@route(PREFIX + '/getsections')
-def GetSections(path, title):
+# This function produces a list of videos for any page with a video player in it 
+@route(PREFIX + '/videobrowse')
+def VideoBrowse(url, title = None):
 
     oc = ObjectContainer(title2=title)
-    content = HTTP.Request(path).content
-    data = HTML.ElementFromString(content)
+    page = HTML.ElementFromURL(url)
+    
+    # To prevent any issues with URLs that do not contain the video playlist json, we put the json pull in a try/except
+    try:
+        json_data = page.xpath('//div[@class="video-player-container"]/@data-video-prop')[0]
+        json = JSON.ObjectFromString(json_data)
+    except: json = None
+    
+    if json:
+        for video in json['channels'][0]['videos']:
+            title = video['title'].replace('&amp,', '&')
+            vid_smil = video['releaseUrl']
+            duration = int(video['length'])*1000
+            desc = video['description']
+            thumb = BASE_URL + video['thumbnailUrl']
 
-    matches = VPLAYER_MATCHES.search(content)
-    if matches:
-        show_id = matches.group(1)
-        xml = HTTP.Request('http://www.hgtv.com/hgtv/channel/xml/0,,%s,00.xml' %show_id).content.strip()
-        xml = RE_AMPERSAND.sub('&amp;', xml)
-        title = XML.ElementFromString(xml).xpath("//title/text()")[0].strip()
-        if 'Season' in title:
-            season = int(RE_SEASON.search(title).group(1))
-        else:
-            season = 0
-        oc.add(DirectoryObject(key = Callback(GetShows, path=path, season=season, title=title), title=title))
-    else:
-        return ObjectContainer(header="Empty", message="There are no videos to list right now.")
-        #pass
+            res_list = MediaList(vid_smil)
+            # Make sure res_ist is not empty
+            if len(res_list) > 0:
+                (rating_url, rating_res) = res_list[0]
+                Log('the value of rating_url is %s' %rating_url)
 
-    # This pulls the data for any additional sections/carousels that may be listed under the video player
-    for section in data.xpath("//ul[@class='channel-list']/li"):
-        title = section.xpath("./h4/text()")[0].strip()
-        url = section.xpath("./div/div[@class='crsl-wrap']/ul/li[1]/a/@href")[0]
-        if 'Season' in title:
-            season = int(RE_SEASON.search(title).group(1))
-        else:
-            season = 0
-        oc.add(DirectoryObject(key = Callback(GetShows, path=BASE_URL+url, season=season, title=title), title=title))
-
-    if len(oc) < 1:
-        return ObjectContainer(header="Sorry", message="There are no video sections for this show")
-    else:
-        return oc
-####################################################################################################
-# This function produces the videos listed within a particular carousel
-# It takes the first video URL within a section or carousel and uses that URL to get the video player info
-# and its corresponding xml file that list all the data for each video listed under the video player
-@route(PREFIX + '/getshows', season=int)
-def GetShows(path, title, season):
-
-    oc = ObjectContainer(title2=title)
-    content = HTTP.Request(path).content
-    matches = VPLAYER_MATCHES.search(content)
-
-    show_id = matches.group(1)
-    xml = HTTP.Request('http://www.hgtv.com/hgtv/channel/xml/0,,%s,00.xml' % show_id).content.strip()
-    xml = RE_AMPERSAND.sub('&amp;', xml)
-
-    for c in XML.ElementFromString(xml).xpath("//video"):
-        title = c.xpath("./clipName")[0].text.strip()
-        duration = Datetime.MillisecondsFromString(c.xpath("./length")[0].text)
-        desc = c.xpath("./abstract")[0].text
-        video_id = c.xpath("./videoId")[0].text
-        thumb_url = c.xpath("./thumbnailUrl")[0].text.replace('_92x69.jpg', '_480x360.jpg')
-        if season > 0 or 'Ep.' in title:
-            if 'Ep.' in title:
-                episode = int(RE_EP.search(title).group(1))
+                oc.add(VideoClipObject(
+                    key = VideoClipObject(title=title, duration=duration, thumb=thumb, summary=desc),
+                    rating_key = rating_url,
+                    title = title,
+                    summary = desc,
+                    thumb = Resource.ContentsOfURLWithFallback(url=thumb),
+                    duration = duration,
+                    items = [
+                        MediaObject(
+                            parts = [
+                                PartObject(key=source)
+                                    ],
+                                    container = Container.MP4,
+                                    video_codec = VideoCodec.H264,
+                                    audio_codec = AudioCodec.AAC,
+                                    audio_channels = 2,
+                                    video_resolution = resolution
+                        )for source,resolution in res_list
+                    ]
+                ))
             else:
-                episode = 0
-            oc.add(
-                EpisodeObject(
-                    url = VIDEO_URL % (video_id, show_id),
-                    title = title,
-                    duration = duration,
-                    summary = desc,
-                    index = episode,
-                    season = season,
-                    thumb = Resource.ContentsOfURLWithFallback(url=thumb_url)
-                )
-            )
-        else:
-            oc.add(
-                VideoClipObject(
-                    url = VIDEO_URL % (video_id, show_id),
-                    title = title,
-                    duration = duration,
-                    summary = desc,
-                    thumb = Resource.ContentsOfURLWithFallback(url=thumb_url)
-                )
-            )
+                Log('The SMIL file %s does not return a list of video sources or resolutions' %vid_smil)
+    else:
+        Log('%s does not contain a video list json or the json is incomplete' %url)
 
     if len(oc) < 1:
-        return ObjectContainer(header="Sorry", message="This section does not contain any videos")
+        Log ('still no value for objects')
+        return ObjectContainer(header="Empty", message="There are currently no videos for this show.")
     else:
         return oc
+
+####################################################################################################
+# This function produces a list of mp4 video files and resolutions from the smil for each video
+@route(PREFIX + '/medialist')
+def MediaList(vid_smil):
+
+    smil = XML.ElementFromURL(vid_smil)
+    res_list = []
+    
+    for videos in smil.xpath('//a:video', namespaces=NAMESPACES):
+        vid_source = videos.xpath('./@src', namespaces=NAMESPACES)[0]
+        # All videos appear to be mp4 but do a check to make sure
+        vid_type = vid_source.split('.')[-1]
+        if vid_type != 'mp4':
+            Log('The %s video is of type %s and not compatible with this plugin' %(vid_source, vid_type))
+            continue
+        vid_resolution = videos.xpath('./@height', namespaces=NAMESPACES)[0]
+        # The smil breaks the video up into parts to include ads but every part references the same mp4 file just at different start and end points
+        # Since there are multiple occurrences of each source and resolution, we get the first one and then break out
+        if (vid_source, vid_resolution) not in res_list:
+            res_list.append((vid_source, vid_resolution))
+        else:
+            break
+    #Log('This value of res_list is %s' %res_list)
+
+    return res_list
