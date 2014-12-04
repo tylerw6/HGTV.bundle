@@ -120,34 +120,16 @@ def VideoBrowse(url, title = None):
             desc = video['description']
             thumb = BASE_URL + video['thumbnailUrl']
 
-            res_list = MediaList(vid_smil)
-            # Make sure res_ist is not empty
-            if len(res_list) > 0:
-                (rating_url, rating_res) = res_list[0]
-                Log('the value of rating_url is %s' %rating_url)
-
-                oc.add(VideoClipObject(
-                    key = VideoClipObject(title=title, duration=duration, thumb=thumb, summary=desc),
-                    rating_key = rating_url,
+            oc.add(
+                CreateObject(
+                    url = url,
+                    vid_smil = vid_smil,
                     title = title,
-                    summary = desc,
-                    thumb = Resource.ContentsOfURLWithFallback(url=thumb),
                     duration = duration,
-                    items = [
-                        MediaObject(
-                            parts = [
-                                PartObject(key=source)
-                                    ],
-                                    container = Container.MP4,
-                                    video_codec = VideoCodec.H264,
-                                    audio_codec = AudioCodec.AAC,
-                                    audio_channels = 2,
-                                    video_resolution = resolution
-                        )for source,resolution in res_list
-                    ]
-                ))
-            else:
-                Log('The SMIL file %s does not return a list of video sources or resolutions' %vid_smil)
+                    summary = desc,
+                    thumb = thumb
+                )
+            )
     else:
         Log('%s does not contain a video list json or the json is incomplete' %url)
 
@@ -158,9 +140,9 @@ def VideoBrowse(url, title = None):
         return oc
 
 ####################################################################################################
-# This function produces a list of mp4 video files and resolutions from the smil for each video
-@route(PREFIX + '/medialist')
-def MediaList(vid_smil):
+# This function creates an object container for RSS feeds that have a media file in the feed
+@route(PREFIX + '/createobject', duration=int)
+def CreateObject(url, vid_smil, title, duration, thumb, summary, include_container=False):
 
     smil = XML.ElementFromURL(vid_smil)
     res_list = []
@@ -180,5 +162,35 @@ def MediaList(vid_smil):
         else:
             break
     #Log('This value of res_list is %s' %res_list)
+        
+    # This makes sure that the smil returned at least one value for the video and resolution
+    if len(res_list)==0:
+        Log ('no values for resolution and video source')
+        return ObjectContainer(header="Empty", message="The video information associated with this webpage is incomplete or invalid.")
+    else:
+        # A few videos mention the season or episode but most do not so since this is an internal feature, we are just making them all VideoClipObjects
+        new_object = VideoClipObject(
+            key = Callback(CreateObject, url=url, vid_smil=vid_smil, title=title, duration=duration, thumb=thumb, summary=summary, include_container=True),
+            rating_key = vid_source,
+            title = title,
+            summary = summary,
+            thumb = Resource.ContentsOfURLWithFallback(url=thumb),
+            duration = duration,
+            items = [
+                MediaObject(
+                    parts = [
+                        PartObject(key=source)
+                            ],
+                            container = Container.MP4,
+                            video_codec = VideoCodec.H264,
+                            audio_codec = AudioCodec.AAC,
+                            audio_channels = 2,
+                            video_resolution = resolution
+                )for source,resolution in res_list
+            ]
+        )
 
-    return res_list
+    if include_container:
+        return ObjectContainer(objects=[new_object])
+    else:
+        return new_object
