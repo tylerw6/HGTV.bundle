@@ -114,8 +114,12 @@ def VideoBrowse(url, title = None):
     
     if json:
         for video in json['channels'][0]['videos']:
-            title = video['title'].replace('&amp,', '&')
             vid_smil = video['releaseUrl']
+
+            if not vid_smil.startswith('http://'):
+                continue
+
+            title = video['title'].replace('&amp,', '&')
             duration = int(video['length'])*1000
             desc = video['description']
             thumb = BASE_URL + video['thumbnailUrl']
