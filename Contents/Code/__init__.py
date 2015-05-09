@@ -34,7 +34,8 @@ def FullEpMenu(title):
     for item in HTML.ElementFromURL(FULLEP_URL).xpath('//div[@class="parbase editorialPromo section"]//ul/li'):
 
         title = item.xpath('.//h4/a/text()')[0]
-        summary = item.xpath('.//h4/a/span//text()')[0]
+        try: summary = item.xpath('.//h4/a/span//text()')[0]
+        except: summary = ''
         thumb = item.xpath('./div[@class="media"]/a/img/@src')[0]
         url = item.xpath('./div[@class="media"]/a/@href')[0]
 
