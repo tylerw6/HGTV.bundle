@@ -36,7 +36,7 @@ def FullEpMenu(title):
         title = item.xpath('.//h4/a/text()')[0]
         try: summary = item.xpath('.//h4/a/span//text()')[0]
         except: summary = ''
-        thumb = item.xpath('./div[@class="media"]/a/img/@src')[0]
+        thumb = item.xpath('./div[@class="media"]/a/img/@data-src')[0]
         url = item.xpath('./div[@class="media"]/a/@href')[0]
 
         oc.add(DirectoryObject(
