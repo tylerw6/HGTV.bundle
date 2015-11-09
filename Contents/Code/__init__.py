@@ -31,7 +31,7 @@ def FullEpMenu(title):
 
     oc = ObjectContainer(title2=title)
 
-    for item in HTML.ElementFromURL(FULLEP_URL).xpath('//div[@class="parbase editorialPromo section"]//ul/li'):
+    for item in HTML.ElementFromURL(FULLEP_URL).xpath('//div[@class="editorialPromo parbase section"]//ul/li'):
 
         title = item.xpath('.//h4/a/text()')[0]
         try: summary = item.xpath('.//h4/a/span//text()')[0]
